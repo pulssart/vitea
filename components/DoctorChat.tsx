@@ -61,6 +61,11 @@ function parseMarkdown(text: string): React.ReactNode {
     let remaining = line
     let key = 0
 
+    // Si la ligne est vide, retourner un espace insécable
+    if (!line || line.trim() === '') {
+      return '\u00A0'
+    }
+
     while (remaining.length > 0) {
       // Bold **text**
       const boldMatch = remaining.match(/\*\*(.+?)\*\*/)
@@ -104,6 +109,11 @@ function parseMarkdown(text: string): React.ReactNode {
       remaining = remaining.slice(index + match[0].length)
     }
 
+    // S'assurer qu'on retourne toujours quelque chose de valide
+    if (parts.length === 0) {
+      return line
+    }
+    
     return parts.length === 1 ? parts[0] : <>{parts}</>
   }
 
@@ -164,6 +174,12 @@ function parseMarkdown(text: string): React.ReactNode {
   }
 
   flushList(listStartNumber)
+  
+  // S'assurer qu'on retourne toujours quelque chose de valide
+  if (elements.length === 0) {
+    return <div className="space-y-0.5">{text}</div>
+  }
+  
   return <div className="space-y-0.5">{elements}</div>
 }
 
@@ -171,11 +187,16 @@ function parseMarkdown(text: string): React.ReactNode {
 function MessageContent({ content, isUser }: { content: string; isUser: boolean }) {
   const parsed = useMemo(() => {
     if (isUser) return content
+    if (!content || content.trim() === '') return null
     return parseMarkdown(content)
   }, [content, isUser])
 
   if (isUser) {
-    return <div className="whitespace-pre-wrap">{content}</div>
+    return <div className="whitespace-pre-wrap">{content || '\u00A0'}</div>
+  }
+
+  if (!parsed) {
+    return <div className="text-text-secondary italic">Message vide</div>
   }
 
   return <>{parsed}</>
