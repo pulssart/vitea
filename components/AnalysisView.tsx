@@ -20,7 +20,7 @@ export default function AnalysisView({ analysisId, onBack }: AnalysisViewProps) 
 
   const categories = useMemo(() => {
     if (!analysis) return []
-    const cats = [...new Set(analysis.biomarkers.map((b) => b.category))]
+    const cats = Array.from(new Set(analysis.biomarkers.map((b) => b.category)))
     return cats.sort()
   }, [analysis])
 

@@ -16,6 +16,20 @@ interface ProfileData {
   sedentaryLevel: string
 }
 
+interface Biomarker {
+  name: string
+  value: number
+  unit: string
+  normalRange: {
+    min: number
+    max: number
+  }
+  status: 'optimal' | 'standard' | 'attention'
+  category: string
+  description?: string
+  recommendation?: string
+}
+
 const SEDENTARY_LABELS: Record<string, string> = {
   sedentary: 'sédentaire',
   light: 'légèrement actif',
@@ -288,7 +302,7 @@ Règles:
 - Ne modifie pas les valeurs ou unités, seulement filtre les entrées.
 
 Liste à vérifier:
-${validatedResult.biomarkers.map((b) => `- ${b.name} : ${b.value} ${b.unit} (ref ${b.normalRange.min}-${b.normalRange.max}) [${b.status}]`).join('\n')}`
+${validatedResult.biomarkers.map((b: Biomarker) => `- ${b.name} : ${b.value} ${b.unit} (ref ${b.normalRange.min}-${b.normalRange.max}) [${b.status}]`).join('\n')}`
 
       const judgeResponse = await openai.chat.completions.create({
         model: 'gpt-4o',

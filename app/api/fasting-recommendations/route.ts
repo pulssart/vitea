@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
+interface Biomarker {
+  name: string
+  value: number
+  unit: string
+  status: string
+}
+
+interface DNACategory {
+  name: string
+  summary: string
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { profile, bloodAnalysis, dnaAnalysis } = await request.json()
@@ -25,11 +37,11 @@ export async function POST(request: NextRequest) {
 
     // Construire le prompt avec les informations pertinentes
     const bloodMarkers = bloodAnalysis.biomarkers
-      .map(b => `${b.name}: ${b.value} ${b.unit} (${b.status})`)
+      .map((b: Biomarker) => `${b.name}: ${b.value} ${b.unit} (${b.status})`)
       .join('\n')
 
     const dnaInsights = dnaAnalysis.categories
-      .map(c => `${c.name}: ${c.summary}`)
+      .map((c: DNACategory) => `${c.name}: ${c.summary}`)
       .join('\n')
 
     const prompt = `Tu es un expert en jeûne intermittent et en médecine personnalisée. 

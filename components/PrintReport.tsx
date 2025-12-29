@@ -366,14 +366,14 @@ export default function PrintReport({ onClose }: PrintReportProps) {
 
   const bloodStats = latestBlood ? {
     total: latestBlood.biomarkers.length,
-    normal: latestBlood.biomarkers.filter(b => b.status === 'optimal' || b.status === 'normal').length,
+    normal: latestBlood.biomarkers.filter(b => b.status === 'optimal').length,
     attention: latestBlood.biomarkers.filter(b => b.status === 'attention' || b.status === 'standard').length,
-    critical: latestBlood.biomarkers.filter(b => b.status === 'critical').length,
+    critical: 0, // 'critical' status not in current type definition
   } : null
 
   const dnaStats = latestDNA ? {
     total: latestDNA.categories.reduce((sum, c) => sum + c.snps.length, 0),
-    favorable: latestDNA.categories.reduce((sum, c) => sum + c.snps.filter(s => s.impact === 'favorable').length, 0),
+    favorable: latestDNA.categories.reduce((sum, c) => sum + c.snps.filter(s => s.impact === 'positive').length, 0),
     neutral: latestDNA.categories.reduce((sum, c) => sum + c.snps.filter(s => s.impact === 'neutral').length, 0),
     risk: latestDNA.categories.reduce((sum, c) => sum + c.snps.filter(s => s.impact === 'risk').length, 0),
   } : null
@@ -707,7 +707,7 @@ export default function PrintReport({ onClose }: PrintReportProps) {
               {latestDNA.categories.map((category, catIdx) => (
                 <div key={catIdx} style={{ marginBottom: '14px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px', borderRadius: '4px', color: 'white', marginBottom: '6px', backgroundColor: COLORS.primary }}>
-                    <h3 style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase' }}>{getDNACategoryLabel(category.name)}</h3>
+                    <h3 style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase' }}>{category.name}</h3>
                     <span style={{ fontSize: '10px', fontWeight: 600 }}>{category.snps.length} variants</span>
                   </div>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', tableLayout: 'fixed' }}>
@@ -725,7 +725,7 @@ export default function PrintReport({ onClose }: PrintReportProps) {
                           <td style={{ padding: '4px 4px 4px 0', color: '#1f2937', verticalAlign: 'top', fontWeight: 500 }}>{snp.gene}</td>
                           <td style={{ padding: '4px 4px 4px 0', color: '#374151', verticalAlign: 'top', fontSize: '9px', lineHeight: 1.4 }}>{snp.trait || snp.description}</td>
                           <td style={{ padding: '4px 4px 4px 0', color: '#374151', fontFamily: 'ui-monospace, monospace', fontSize: '9px', verticalAlign: 'top' }}>{snp.genotype}</td>
-                          <td style={{ padding: '4px 4px 4px 0', verticalAlign: 'top', color: snp.impact === 'favorable' ? COLORS.success : snp.impact === 'risk' ? COLORS.warning : COLORS.gray }}>
+                          <td style={{ padding: '4px 4px 4px 0', verticalAlign: 'top', color: snp.impact === 'positive' ? COLORS.success : snp.impact === 'risk' ? COLORS.warning : COLORS.gray }}>
                             {getSNPImpactLabel(snp.impact)}
                           </td>
                         </tr>
