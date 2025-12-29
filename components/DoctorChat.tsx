@@ -25,6 +25,11 @@ interface Message {
 
 // Simple markdown parser for chat messages
 function parseMarkdown(text: string): React.ReactNode {
+  // Protection contre les valeurs invalides
+  if (!text || typeof text !== 'string') {
+    return <div>{String(text || '')}</div>
+  }
+  
   const lines = text.split('\n')
   const elements: React.ReactNode[] = []
   let listItems: string[] = []
@@ -186,19 +191,41 @@ function parseMarkdown(text: string): React.ReactNode {
 // Memoized message content component
 function MessageContent({ content, isUser }: { content: string; isUser: boolean }) {
   const parsed = useMemo(() => {
-    if (isUser) return content
-    if (!content || content.trim() === '') return null
-    return parseMarkdown(content)
+    if (isUser) {
+      return content || '\u00A0'
+    }
+    if (!content || content.trim() === '' || content === '...') {
+      return '\u00A0' // Retourner un espace insécable au lieu de null
+    }
+    try {
+      const result = parseMarkdown(content)
+      // S'assurer que le résultat est valide
+      if (result === null || result === undefined) {
+        return content || '\u00A0'
+      }
+      return result
+    } catch (error) {
+      console.error('Error parsing markdown:', error)
+      return content || '\u00A0'
+    }
   }, [content, isUser])
 
   if (isUser) {
-    return <div className="whitespace-pre-wrap">{content || '\u00A0'}</div>
+    return <div className="whitespace-pre-wrap">{parsed}</div>
   }
 
-  if (!parsed) {
-    return <div className="text-text-secondary italic">Message vide</div>
+  // S'assurer qu'on retourne toujours un élément React valide
+  // Ne jamais retourner null ou undefined
+  if (parsed === null || parsed === undefined) {
+    return <div>{'\u00A0'}</div>
   }
 
+  // Si parsed est une string, l'envelopper dans un div
+  if (typeof parsed === 'string') {
+    return <div>{parsed}</div>
+  }
+
+  // Sinon, c'est déjà un élément React valide
   return <>{parsed}</>
 }
 
@@ -768,10 +795,16 @@ export default function DoctorChat({ isPopup = false }: DoctorChatProps = {}) {
                     {isStreaming && streamingMessage ? (
                       <div className="inline-block bg-surface border border-border rounded-2xl rounded-tl-md px-5 py-3 max-w-[85%]">
                         <div className="text-[15px] leading-relaxed text-text-primary">
-                          <MessageContent content={streamingMessage} isUser={false} />
-                          <span 
-                            className="inline-block w-0.5 h-4 bg-accent-primary ml-1 align-middle cursor-blink-animation" 
-                          />
+                          {streamingMessage === '...' ? (
+                            <span className="text-text-secondary">...</span>
+                          ) : (
+                            <>
+                              <MessageContent content={streamingMessage} isUser={false} />
+                              <span 
+                                className="inline-block w-0.5 h-4 bg-accent-primary ml-1 align-middle cursor-blink-animation" 
+                              />
+                            </>
+                          )}
                         </div>
                       </div>
                     ) : (
