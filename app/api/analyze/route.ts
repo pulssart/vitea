@@ -216,7 +216,7 @@ Compte les biomarqueurs et assure-toi de n'en avoir oublié aucun !
 
     // Call OpenAI
     const response = await openai.chat.completions.create({
-      model: 'gpt-5.2',
+      model: 'gpt-4o',
       messages: [
         {
           role: 'user',
@@ -225,6 +225,7 @@ Compte les biomarqueurs et assure-toi de n'en avoir oublié aucun !
       ],
       max_completion_tokens: 8000,
       temperature: 0.3,
+      response_format: { type: 'json_object' },
     })
 
     const assistantMessage = response.choices[0]?.message?.content
@@ -239,17 +240,33 @@ Compte les biomarqueurs et assure-toi de n'en avoir oublié aucun !
     // Parse the JSON response
     let analysisResult
     try {
-      // Try to extract JSON from the response (in case there's extra text)
-      const jsonMatch = assistantMessage.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        analysisResult = JSON.parse(jsonMatch[0])
-      } else {
-        throw new Error('No JSON found in response')
+      // Avec response_format: { type: 'json_object' }, la réponse devrait être directement du JSON
+      // Mais on essaie aussi d'extraire le JSON si nécessaire
+      let jsonText = assistantMessage.trim()
+      
+      // Si la réponse commence par ```json ou ```, on l'enlève
+      if (jsonText.startsWith('```json')) {
+        jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+      } else if (jsonText.startsWith('```')) {
+        jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '')
+      }
+      
+      // Essayer de parser directement
+      try {
+        analysisResult = JSON.parse(jsonText)
+      } catch {
+        // Si ça échoue, essayer d'extraire le JSON avec une regex
+        const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+          analysisResult = JSON.parse(jsonMatch[0])
+        } else {
+          throw new Error('No JSON found in response')
+        }
       }
     } catch (parseError) {
-      console.error('Failed to parse AI response:', assistantMessage)
+      console.error('Failed to parse AI response:', assistantMessage.substring(0, 500))
       return NextResponse.json(
-        { message: 'Erreur lors du traitement de la réponse de l\'IA' },
+        { message: 'Erreur lors du traitement de la réponse de l\'IA. La réponse n\'est pas au format JSON valide.' },
         { status: 500 }
       )
     }
@@ -358,15 +375,26 @@ ${validatedResult.biomarkers.map((b: Biomarker) => `- ${b.name} : ${b.value} ${b
       )
     }
 
-    if (error?.status === 400 && error?.message?.includes('Could not process image')) {
+    if (error?.status === 400) {
+      let errorMessage = 'Erreur lors de l\'analyse'
+      
+      if (error?.message?.includes('Could not process image')) {
+        errorMessage = 'Impossible de traiter l\'image. Vérifiez que le fichier est lisible.'
+      } else if (error?.message?.includes('model')) {
+        errorMessage = 'Modèle OpenAI invalide. Vérifiez votre configuration.'
+      } else if (error?.message) {
+        errorMessage = error.message
+      }
+      
       return NextResponse.json(
-        { message: 'Impossible de traiter l\'image. Vérifiez que le fichier est lisible.' },
+        { message: errorMessage },
         { status: 400 }
       )
     }
 
+    // Toujours retourner du JSON, même en cas d'erreur inattendue
     return NextResponse.json(
-      { message: error.message || 'Erreur lors de l\'analyse' },
+      { message: error?.message || 'Erreur lors de l\'analyse' },
       { status: 500 }
     )
   }

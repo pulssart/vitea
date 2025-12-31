@@ -184,8 +184,16 @@ export default function FileUpload({ onComplete }: { onComplete: () => void }) {
       
       setAnalysisProgress(80)
       
+      // Vérifier le Content-Type pour s'assurer qu'on reçoit du JSON
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text()
+        console.error('Réponse non-JSON reçue:', text.substring(0, 200))
+        throw new Error('Le serveur a retourné une réponse invalide. Vérifiez votre connexion et réessayez.')
+      }
+      
       if (!response.ok) {
-        const error = await response.json()
+        const error = await response.json().catch(() => ({ message: 'Erreur lors de l\'analyse' }))
         throw new Error(error.message || 'Erreur lors de l\'analyse')
       }
       
