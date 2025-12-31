@@ -214,8 +214,14 @@ Compte les biomarqueurs et assure-toi de n'en avoir oublié aucun !
       }
     }
 
-    // Call OpenAI
-    const response = await openai.chat.completions.create({
+    // Call OpenAI avec timeout
+    // Netlify a un timeout de 26s pour les fonctions gratuites
+    // On limite à 20s pour laisser du temps au traitement
+    const timeoutPromise = new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error('Timeout: L\'analyse prend trop de temps')), 20000)
+    )
+    
+    const openaiPromise = openai.chat.completions.create({
       model: 'gpt-5.2',
       messages: [
         {
@@ -223,10 +229,12 @@ Compte les biomarqueurs et assure-toi de n'en avoir oublié aucun !
           content,
         },
       ],
-      max_completion_tokens: 8000,
+      max_completion_tokens: 6000, // Réduit pour accélérer
       temperature: 0.3,
       response_format: { type: 'json_object' },
     })
+    
+    const response = await Promise.race([openaiPromise, timeoutPromise])
 
     const assistantMessage = response.choices[0]?.message?.content
 

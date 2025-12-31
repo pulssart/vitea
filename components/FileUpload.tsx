@@ -172,15 +172,30 @@ export default function FileUpload({ onComplete }: { onComplete: () => void }) {
         )
       )
       
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          files: filesData,
-          profile,
-          apiKey: profile?.openaiKey,
-        }),
-      })
+      // Créer un AbortController pour gérer les timeouts
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 25000) // 25 secondes (juste sous la limite Netlify)
+      
+      let response: Response
+      try {
+        response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            files: filesData,
+            profile,
+            apiKey: profile?.openaiKey,
+          }),
+          signal: controller.signal,
+        })
+        clearTimeout(timeoutId)
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId)
+        if (fetchError.name === 'AbortError') {
+          throw new Error('L\'analyse prend trop de temps. Essayez avec moins de fichiers ou des images plus petites.')
+        }
+        throw fetchError
+      }
       
       setAnalysisProgress(80)
       
@@ -189,6 +204,12 @@ export default function FileUpload({ onComplete }: { onComplete: () => void }) {
       if (!contentType || !contentType.includes('application/json')) {
         const text = await response.text()
         console.error('Réponse non-JSON reçue:', text.substring(0, 200))
+        
+        // Détecter spécifiquement les timeouts Netlify
+        if (text.includes('Inactivity Timeout') || text.includes('timeout')) {
+          throw new Error('L\'analyse a pris trop de temps et a été annulée. Essayez avec moins de fichiers ou des images plus petites.')
+        }
+        
         throw new Error('Le serveur a retourné une réponse invalide. Vérifiez votre connexion et réessayez.')
       }
       

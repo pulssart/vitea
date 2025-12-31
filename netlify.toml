@@ -8,3 +8,10 @@
 [build.environment]
   NODE_VERSION = "20"
 
+# Configuration des fonctions pour augmenter le timeout
+# Netlify permet jusqu'à 26 secondes pour les fonctions gratuites
+# et jusqu'à 60 secondes pour les plans payants
+[functions]
+  # Timeout en secondes (max 26 pour gratuit, 60 pour payant)
+  timeout = 26
+
